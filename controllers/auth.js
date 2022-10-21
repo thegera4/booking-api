@@ -5,20 +5,22 @@ import jwt from "jsonwebtoken";
 
 export const register = async (req, res, next) => {
   try {
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(req.body.password, salt);
+    const salt = bcrypt.genSaltSync(10); // 10 is the number of rounds
+    const hash = bcrypt.hashSync(req.body.password, salt); // hash the password
 
     const newUser = new User({
-      ...req.body,
-      password: hash,
+      username: req.body.username,
+      email: req.body.email,
+      password: hash, // store the hash
     });
 
     await newUser.save();
-    res.status(200).send("User has been created.");
+    res.status(201).send("User has been created.");
   } catch (err) {
     next(err);
   }
 };
+
 export const login = async (req, res, next) => {
   try {
     const user = await User.findOne({ username: req.body.username });
@@ -31,15 +33,15 @@ export const login = async (req, res, next) => {
     if (!isPasswordCorrect)
       return next(createError(400, "Wrong password or username!"));
 
-    const token = jwt.sign(
+    const token = jwt.sign( // create a token when user logs in
       { id: user._id, isAdmin: user.isAdmin },
       process.env.JWT
     );
 
-    const { password, isAdmin, ...otherDetails } = user._doc;
+    const { password, isAdmin, ...otherDetails } = user._doc; // remove password from the user object
     res
-      .cookie("access_token", token, {
-        httpOnly: true,
+      .cookie("access_token", token, { // send the token to the client
+        httpOnly: true, // only accessible by the web server
       })
       .status(200)
       .json({ details: { ...otherDetails }, isAdmin });
